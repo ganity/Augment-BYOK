@@ -64,33 +64,6 @@ function tryFromEndpointFieldsBasic(endpoint, rawBody) {
     return { ok: true, system, messages: [{ role: "user", content: user }], source: "byok.endpointFields.chat-input-completion" };
   }
 
-  if (ep === "/edit") {
-    const lang = normalizeString(b.lang);
-    const path = normalizeString(b.path);
-    const instruction = normalizeString(b.instruction);
-    const { prefix, selectedText, suffix } = extractCodeContext(b);
-    if (!normalizeString(instruction) && !normalizeString(prefix) && !normalizeString(selectedText) && !normalizeString(suffix)) return null;
-
-    const system = buildSystem({
-      purpose: "edit",
-      directives,
-      outputConstraints:
-        "Apply the instruction to the selected code.\n- Output ONLY the replacement code for the selected range\n- No markdown, no explanations\n- Do NOT wrap in ``` code fences"
-    });
-
-    const parts = [];
-    if (instruction) parts.push(fmtSection("Instruction", instruction));
-    if (path) parts.push(fmtSection("Path", path));
-    if (lang) parts.push(fmtSection("Language", lang));
-    if (prefix) parts.push(fmtCodeSection("Prefix", prefix, { lang }));
-    if (selectedText || prefix || suffix) parts.push(fmtCodeSection("Selected (replace this)", selectedText || "<EMPTY SELECTION>", { lang }));
-    if (suffix) parts.push(fmtCodeSection("Suffix", suffix, { lang }));
-
-    const user = parts.filter(Boolean).join("\n\n").trim();
-    if (!user) return null;
-    return { ok: true, system, messages: [{ role: "user", content: user }], source: "byok.endpointFields.edit" };
-  }
-
   if (ep === "/instruction-stream") {
     const lang = normalizeString(b.lang);
     const path = normalizeString(b.path);
@@ -201,21 +174,6 @@ function tryFromEndpointFieldsBasic(endpoint, rawBody) {
     const user = parts.filter(Boolean).join("\n\n").trim();
     if (!user) return null;
     return { ok: true, system, messages: [{ role: "user", content: user }], source: "byok.endpointFields.generate-commit-message-stream" };
-  }
-
-  if (ep === "/generate-conversation-title") {
-    const system = buildSystem({
-      purpose: "generate-conversation-title",
-      directives,
-      outputConstraints: "Generate a short, specific conversation title (<= 8 words). Output ONLY the title. Do NOT wrap in ``` code fences."
-    });
-
-    const history = historyToMessages(b.chat_history ?? b.chatHistory, { maxItems: 24 });
-    const messages = history.length
-      ? [...history, { role: "user", content: "Generate a title for this conversation." }]
-      : [{ role: "user", content: "Generate a title for this conversation." }];
-
-    return { ok: true, system, messages, source: "byok.endpointFields.generate-conversation-title" };
   }
 
   if (ep === "/next-edit-stream") {

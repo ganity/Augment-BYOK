@@ -71,21 +71,23 @@ test("text-assembly: next-edit-stream accepts blob plus selection-only context",
   assert.ok(res.messages[0].content.includes("Selected (replace this)"));
 });
 
-test("text-assembly: edit accepts empty selection insertion", async () => {
-  const res = await resolveByokTextPromptContext({
-    endpoint: "/edit",
-    body: {
-      instruction: "insert debug call",
-      path: "src/a.js",
-      lang: "javascript",
-      prefix: "const a = 1;\n",
-      selected_text: "",
-      suffix: "return a;\n"
-    }
-  });
-
-  assert.equal(res.delegatedSource, "byok.endpointFields.edit");
-  assert.equal(Array.isArray(res.messages), true);
-  assert.equal(res.messages.length, 1);
-  assert.ok(res.messages[0].content.includes("<EMPTY SELECTION>"));
+test("text-assembly: removed endpoints are rejected", async () => {
+  for (const endpoint of ["/edit", "/generate-conversation-title"]) {
+    await assert.rejects(
+      async () =>
+        await resolveByokTextPromptContext({
+          endpoint,
+          body: {
+            instruction: "insert debug call",
+            path: "src/a.js",
+            lang: "javascript",
+            prefix: "const a = 1;\n",
+            selected_text: "",
+            suffix: "return a;\n",
+            chat_history: [{ role: "user", content: "name this chat" }]
+          }
+        }),
+      /official text assembler delegation failed: unsupported_endpoint/
+    );
+  }
 });

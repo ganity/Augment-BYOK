@@ -128,7 +128,6 @@ const CALL_API_HANDLERS = {
   "/chat": handleChat,
   "/completion": handleCompletion,
   "/chat-input-completion": handleCompletion,
-  "/edit": handleEdit,
   "/next_edit_loc": handleNextEditLoc
 };
 

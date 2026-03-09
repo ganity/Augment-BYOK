@@ -52,13 +52,15 @@ test("official-text-delegation: chat endpoint is rejected (chat delegation handl
 });
 
 test("official-text-delegation: unsupported endpoint returns miss", async () => {
-  const res = await maybeBuildDelegatedTextPrompt({
-    endpoint: "/unknown",
-    body: { message: "hello" }
-  });
+  for (const endpoint of ["/unknown", "/edit", "/generate-conversation-title"]) {
+    const res = await maybeBuildDelegatedTextPrompt({
+      endpoint,
+      body: { message: "hello" }
+    });
 
-  assert.equal(res.ok, false);
-  assert.equal(res.reason, "unsupported_endpoint");
+    assert.equal(res.ok, false);
+    assert.equal(res.reason, "unsupported_endpoint");
+  }
 });
 
 test("official-text-delegation: invalid non-chat body returns miss", async () => {

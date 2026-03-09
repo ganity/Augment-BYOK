@@ -15,15 +15,13 @@ const OFFICIAL_EXECUTION_DELEGATION_ENDPOINTS = Object.freeze([
   "/chat",
   "/completion",
   "/chat-input-completion",
-  "/edit",
   "/next_edit_loc",
   "/chat-stream",
   "/prompt-enhancer",
   "/instruction-stream",
   "/smart-paste-stream",
   "/next-edit-stream",
-  "/generate-commit-message-stream",
-  "/generate-conversation-title"
+  "/generate-commit-message-stream"
   /* END GENERATED: OFFICIAL_EXECUTION_DELEGATION_ENDPOINTS */
 ]);
 const OFFICIAL_EXECUTION_DELEGATION_ENDPOINT_SET = new Set(OFFICIAL_EXECUTION_DELEGATION_ENDPOINTS);
