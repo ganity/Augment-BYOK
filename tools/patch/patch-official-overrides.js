@@ -20,7 +20,45 @@ function patchClientAuthGetters(src) {
     "getCompletionURL",
     () => `try{${OFFICIAL_CONN_EXPR}if(__byok_conn.apiToken&&__byok_conn.completionURL)return __byok_conn.completionURL}catch{}`
   );
-  return { out: completionURLRes.out, getApiTokenPatched: apiTokenRes.count, getCompletionURLPatched: completionURLRes.count };
+  const fallbackRes = patchClientAuthSettingsFallback(completionURLRes.out);
+  return {
+    out: fallbackRes.out,
+    getApiTokenPatched: apiTokenRes.count,
+    getCompletionURLPatched: completionURLRes.count,
+    settingsApiTokenFallbackPatched: fallbackRes.apiTokenCount,
+    settingsCompletionURLFallbackPatched: fallbackRes.completionURLCount
+  };
+}
+
+function replaceAllOrThrow(src, re, replacement, label) {
+  const matches = Array.from(src.matchAll(re));
+  if (!matches.length) throw new Error(`patch failed: ${label} (matched=0)`);
+  return { out: src.replace(re, replacement), count: matches.length };
+}
+
+function patchClientAuthSettingsFallback(src) {
+  let out = src;
+  const tokenRes = replaceAllOrThrow(out, /return this\.configListener\.config\.apiToken/g, `return ""`, "clientAuth apiToken settings fallback");
+  out = tokenRes.out;
+  const urlRes = replaceAllOrThrow(
+    out,
+    /return this\.configListener\.config\.completionURL/g,
+    `return require("./byok/config/official").DEFAULT_OFFICIAL_COMPLETION_URL`,
+    "clientAuth completionURL settings fallback"
+  );
+  return { out: urlRes.out, apiTokenCount: tokenRes.count, completionURLCount: urlRes.count };
+}
+
+function patchConfigListenerNormalizeConfig(src) {
+  const re =
+    /apiToken:\(t\?\.advanced\?\.apiToken\?\?t\.apiToken\?\?""\)\.trim\(\)\.toUpperCase\(\),completionURL:\(t\?\.advanced\?\.completionURL\?\?t\.completionURL\?\?""\)\.trim\(\)/g;
+  const replacement =
+    `apiToken:(()=>{try{${OFFICIAL_CONN_EXPR}return (__byok_conn.apiToken||"").trim()}catch{return""}})(),` +
+    `completionURL:(()=>{try{${OFFICIAL_CONN_EXPR}const __byok_tok=(__byok_conn.apiToken||"").trim();return __byok_tok?(__byok_conn.completionURL||__byok_off.DEFAULT_OFFICIAL_COMPLETION_URL||"https://api.augmentcode.com/").trim():""}catch{return""}})()`;
+
+  const res = replaceAllOrThrow(src, re, replacement, "configListener normalizeConfig ignore settings apiToken/completionURL");
+  if (res.count !== 1) throw new Error(`patch failed: normalizeConfig match count unexpected (${res.count})`);
+  return { out: res.out, count: res.count };
 }
 
 function patchEndpointBasePathPreservation(src) {
@@ -74,6 +112,8 @@ function patchOfficialOverrides(filePath) {
   let next = original;
   const gettersRes = patchClientAuthGetters(next);
   next = gettersRes.out;
+  const normalizeConfigRes = patchConfigListenerNormalizeConfig(next);
+  next = normalizeConfigRes.out;
   const pathRes = patchEndpointBasePathPreservation(next);
   next = pathRes.out;
 
@@ -89,6 +129,9 @@ function patchOfficialOverrides(filePath) {
     reason: "patched",
     getApiTokenPatched: gettersRes.getApiTokenPatched,
     getCompletionURLPatched: gettersRes.getCompletionURLPatched,
+    settingsApiTokenFallbackPatched: gettersRes.settingsApiTokenFallbackPatched,
+    settingsCompletionURLFallbackPatched: gettersRes.settingsCompletionURLFallbackPatched,
+    normalizeConfigPatched: normalizeConfigRes.count,
     makeAuthenticatedCallPatched: pathRes.makeAuthenticatedCallPatched,
     makeAuthenticatedCallStreamPatched: pathRes.makeAuthenticatedCallStreamPatched,
     callApiPatched: apiRes.count,

@@ -294,6 +294,10 @@ test("patchOfficialOverrides: applies expected replacements and is idempotent", 
       `  async getCompletionURL(){return this.configListener.config.completionURL}`,
       `}`,
       ``,
+      `function normalizeConfigListener(t){`,
+      `  return {apiToken:(t?.advanced?.apiToken??t.apiToken??"").trim().toUpperCase(),completionURL:(t?.advanced?.completionURL??t.completionURL??"").trim()}`,
+      `}`,
+      ``,
       `class ApiClient{`,
       `  async makeAuthenticatedCall(t,r,n,i="POST",o,s){`,
       `    const c="https://example.com/root/";`,
@@ -320,6 +324,9 @@ test("patchOfficialOverrides: applies expected replacements and is idempotent", 
     assert.equal(r1.changed, true);
     assert.equal(r1.getApiTokenPatched, 1);
     assert.equal(r1.getCompletionURLPatched, 1);
+    assert.equal(r1.settingsApiTokenFallbackPatched, 1);
+    assert.equal(r1.settingsCompletionURLFallbackPatched, 1);
+    assert.equal(r1.normalizeConfigPatched, 1);
     assert.equal(r1.makeAuthenticatedCallPatched, 1);
     assert.equal(r1.makeAuthenticatedCallStreamPatched, 1);
     assert.equal(r1.callApiPatched, 1);
@@ -331,6 +338,12 @@ test("patchOfficialOverrides: applies expected replacements and is idempotent", 
     assert.ok(out1.includes('const __byok_off=require("./byok/config/official");const __byok_conn=__byok_off.getOfficialConnection();'));
     assert.ok(out1.includes("if(__byok_conn.apiToken)return __byok_conn.apiToken"));
     assert.ok(out1.includes("if(__byok_conn.apiToken&&__byok_conn.completionURL)return __byok_conn.completionURL"));
+    assert.ok(!out1.includes("return this.configListener.config.apiToken"));
+    assert.ok(!out1.includes("return this.configListener.config.completionURL"));
+    assert.ok(out1.includes('return ""'));
+    assert.ok(out1.includes('return require("./byok/config/official").DEFAULT_OFFICIAL_COMPLETION_URL'));
+    assert.ok(out1.includes('return (__byok_conn.apiToken||"").trim()'));
+    assert.ok(out1.includes('__byok_conn.completionURL||__byok_off.DEFAULT_OFFICIAL_COMPLETION_URL||"https://api.augmentcode.com/"'));
     assert.ok(out1.includes('if(typeof t==="string"&&t[0]==="/")t=t.slice(1);'));
     assert.ok(out1.includes("if(__byok_conn.apiToken&&!__byok_useOAuth){if(__byok_conn.completionURL)baseUrl=__byok_conn.completionURL;apiToken=__byok_conn.apiToken;}"));
     assert.ok(out1.includes('if(baseUrl==null||baseUrl==="")baseUrl=await this.clientAuth.getCompletionURL();'));
