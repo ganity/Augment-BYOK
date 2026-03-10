@@ -6,3 +6,5 @@ config.yaml
 
 webview.log
 vscode.log
+.history/
+.DS_Store
